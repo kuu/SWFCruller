@@ -1,16 +1,18 @@
 SWFCruller
 ==========
 
-Description:
-SWFCruller - Extends the Chrome Developer Tools for debugging SWFCrew.
-You can use this for monitoring the internal state of running SWFCrew on the Chrome devtools.
-[SWFCrew](https://github.com/Moncader/SWFCrew) : FlashPlayer written in JavaScript, developed by Jason Parrott.
+Description
+----------
+SWFCruller extends the Chrome Developer Tools for debugging [SWFCrew](https://github.com/Moncader/SWFCrew), which is a FlashLite player written in JavaScript. This is a dedicated tool for monitoring the internal state of the SWFCrew running on the Chrome browser via the Developer Tools panel.
 
-Feature (currently supported):
- - Displaying of character-id and type of the display objects currently on the stage.
+Features
+--------
+  - Displaying of character-id and type of the display objects currently on the stage.
 
-Usage:
+Usage
+------
   - Clone this repository.
-  - Add 'extensions' directory to Google Chrome as an unpacked extension. (see the [tutorial](http://developer.chrome.com/extensions/getstarted.html#unpacked))
-  - Launch Chrome Developer Tools when the swfcrew.js is loaded. (Note that lauching the devtools causes reload of the page.)
+  - Add 'extensions' directory to your Google Chrome browser as an unpacked extension (see the [tutorial](http://developer.chrome.com/extensions/getstarted.html#unpacked).)
+  - Launch the browser and open up a web page that uses swfcrew.js
+  - Open the Chrome Developer Tools window. (Note that this causes the web page to reload to inject some JavaScript code.)
   - Choose 'SWFCruller' tab in the devtools panels, then you can see some inspected data on the panel.
