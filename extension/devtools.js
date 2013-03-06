@@ -5,6 +5,7 @@ chrome.devtools.panels.create(
   function (panel) {
     var code = [
         "window.stage = null;",
+        "window.excludedIds = [];",
         "window.addEventListener('message', function(event) {",
           "if (event.source != window) return;",
           "var message = event.data;",
@@ -23,6 +24,11 @@ chrome.devtools.panels.create(
               "from: 'webpage', type: 'playbackstate',",
               "data: (stage.isOpen ? 'playing' : 'stopped')",
             "}), '*');",
+          "} else if (message.type === 'exclude') {",
+            "excludedIds = message.data || [];",
+            "window.postMessage(JSON.stringify({",
+              "from: 'webpage', type: 'excluded',",
+              "data: excludedIds}), '*');",
           "} else if (message.type === 'inject') {",
           "if (window.theatre) {",
             "var swfcrew = window.theatre.crews.swf;",
@@ -51,8 +57,12 @@ chrome.devtools.panels.create(
                     "tType = tActorClass.prototype.displayListType;",
                   "} else {",
                     "tActor = pSpriteActor.getActorAtLayer(pData.depth);",
+                    "if (!tActor) return;",
                     "tId = tActor.displayListId;",
                     "tType = tActor.displayListType;",
+                  "}",
+                  "if (excludedIds.indexOf(tId) !== -1) {",
+                    "return;",
                   "}",
                   "tType = tType ? tType.substring(6) : '';",
                   "messageData.data = {",
@@ -109,10 +119,28 @@ chrome.devtools.panels.create(
 
       // Show the root sprite.
       var document = window.document;
-      root = document.getElementById('0');
+      var root = document.getElementById('0');
       root.innerHTML = 'id: 0 (RootSprite)';
       root.style.position = 'relative';
       root.style.color = 'blue';
+
+      // Filter the specified objects.
+      var filterText = document.getElementById('filtertxt');
+      var filterButton = document.getElementById('filterbtn');
+      var excludedList = document.getElementById('excluded');
+      filterButton.addEventListener('click', function () {
+        var list = filterText.value, array, id, idList = [];
+        if (list) {
+          array = list.split(' ');
+          for (var i = 0, il = array.length; i < il; i++) {
+            id = parseInt(array[i]);
+            if (id) idList.push(id);
+          }
+          if (idList.length > 0) {
+            port.postMessage({from:'devtools', type: 'exclude', data: idList});
+          }
+        }
+      }, false);
 
       // The element added to the screen at last.
       var lastAdded = null;
@@ -149,6 +177,13 @@ chrome.devtools.panels.create(
             playbackButton.update('play.jpg', null, false);
           } else {
             playbackButton.update('stop.jpg', null, false);
+          }
+        } else if (message.type === 'excluded') {
+          // Display the currently excluded objects.
+          if (data && data.length > 0) {
+            excludedList.innerHTML = 'Excluded id: ' + data.join();
+          } else {
+            excludedList.innerHTML = '<- Input a space-separated list of character ids you want to temporarily hide.';
           }
         }
       });
