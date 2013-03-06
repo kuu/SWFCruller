@@ -4,6 +4,11 @@
   "description": "Extends the Developer Tools, monitoring the internal state of SWFCrew.",
   "devtools_page": "devtools.html",
   "manifest_version": 2,
+  "icons": {
+    "16": "icon-16.png",
+    "48": "icon-48.png",
+    "128": "icon-128.png"
+  },
   "permissions": [
     "tabs",
     "<all_urls>"
