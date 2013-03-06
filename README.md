@@ -1,4 +1,4 @@
-SWFCruller
+![SWFCruller](https://raw.github.com/kuu/SWFCruller/master/extension/icon-32.png "SWFCruller") SWFCruller
 ==========
 
 Description
