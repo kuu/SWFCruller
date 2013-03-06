@@ -17,3 +17,7 @@ Usage
   - Launch the browser and open up a web page that uses swfcrew.js
   - Open the Chrome Developer Tools window. (Note that this causes the web page to reload to inject some JavaScript code.)
   - Choose 'SWFCruller' tab in the devtools panels, then you can see some inspected data on the panel.
+
+Screenshot
+-----
+![Screenshot](https://raw.github.com/kuu/SWFCruller/master/screenshot.jpg "Screenshot")
