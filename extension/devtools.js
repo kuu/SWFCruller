@@ -50,7 +50,7 @@ chrome.devtools.panels.create(
             "var messageData = {from: 'webpage', type: 'actions', data: null};",
             "var overrideActions = function (pAction) {",
                 "actions[pAction] = function (pSpriteActor, pData) {",
-                  "var tId, tType, tActor;",
+                  "var tId, tType, tActor, tInstanceId;",
                   "if (pData.id) {",
                     "tId = pData.id;",
                     "tActorClass = pSpriteActor.player.loader.actorMap[tId];",
@@ -128,6 +128,7 @@ chrome.devtools.panels.create(
       var filterText = document.getElementById('filtertxt');
       var filterButton = document.getElementById('filterbtn');
       var excludedList = document.getElementById('excluded');
+      var nothingExcludedMsg = excludedList.innerHTML = '<- Input chracter ids separated with a space, which then will never be added to the stage.';
       filterButton.addEventListener('click', function () {
         var list = filterText.value, array, id, idList = [];
         if (list) {
@@ -183,7 +184,7 @@ chrome.devtools.panels.create(
           if (data && data.length > 0) {
             excludedList.innerHTML = 'Excluded id: ' + data.join();
           } else {
-            excludedList.innerHTML = '<- Input a space-separated list of character ids you want to temporarily hide.';
+            excludedList.innerHTML = nothingExcludedMsg;
           }
         }
       });
