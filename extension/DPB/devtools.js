@@ -1,11 +1,12 @@
 chrome.devtools.panels.create(
   "SWFCruller",
-  "icon.png",
-  "panel.html",
+  "../img/icon.png",
+  "../panel.html",
   function (panel) {
     var functionToInject = function (global) {
         global.swfcruller = {};
         global.swfcruller.excludedIds = [];
+        var uniqueInstanceId = 1;
         global.addEventListener('message', function(event) {
           if (event.source != global) return;
           var message = event.data;
@@ -68,6 +69,11 @@ chrome.devtools.panels.create(
             };
             WrapperPlayer.prototype = Object.create(Player.prototype);
             WrapperPlayer.prototype.constructor = WrapperPlayer;
+            WrapperPlayer.prototype.newFromId = function(pId) {
+              var actor = Player.prototype.newFromId.call(this, pId);
+              if (actor) actor['uniqueInstanceId'] = uniqueInstanceId++;
+              return actor;
+            };
             swfcrew.Player = WrapperPlayer;
             var origMethods = {
               add: actions.add,
@@ -97,7 +103,7 @@ chrome.devtools.panels.create(
                     origMethods[pAction](pSpriteActor, pData);
                   }
                   tInstanceId = tActor.uniqueInstanceId;
-                  tParentInstanceId = (pSpriteActor.uniqueInstanceId === -1 ? 0 : pSpriteActor.uniqueInstanceId);
+                  tParentInstanceId = (pSpriteActor.uniqueInstanceId === void 0 ? 0 : pSpriteActor.uniqueInstanceId);
                   tType = tActor.displayListType;
                   tType = tType ? tType.substring(6) : '';
                   messageData.data = {
@@ -131,7 +137,7 @@ chrome.devtools.panels.create(
     var port = chrome.extension.connect();
 
     // Create buttons.
-    var playbackButton = panel.createStatusBarButton('stop.jpg', 'pause/resume the playback of SWF', false);
+    var playbackButton = panel.createStatusBarButton('../img/stop.jpg', 'pause/resume the playback of SWF', false);
     playbackButton.onClicked.addListener(function () {
       port.postMessage({from:'devtools', type: 'togglePlay'});
     });
@@ -188,16 +194,25 @@ chrome.devtools.panels.create(
 
       // The element added to the screen at last.
       var lastAdded = null;
+      var pendingQueue = [];
 
       // Set the UI listeners.
       port.onMessage.addListener(function (message) {
         if (message.from !== 'webpage') return;
-        var data = message.data;
+        var response = message.data;
         if (message.type === 'echo') {
           ;
         } else if (message.type === 'actions') {
           // Display the data inspected.
+          var tmpPendingQueue = [], data;
+          pendingQueue.push(response);
+          while (data = pendingQueue.pop()) {
           var parent = document.getElementById(data.parent);
+          if (!parent) {
+            tmpPendingQueue.push(data);
+            continue;
+          }
+          parent = document.getElementById(data.parent);
           if (data.action === 'add') {
             var elem = document.createElement('div');
             elem.id = data.target;
@@ -215,22 +230,24 @@ chrome.devtools.panels.create(
             if (lastAdded === elem) lastAdded = null;
             parent.removeChild(elem);
           }
+          }
+          pendingQueue = pendingQueue.concat(tmpPendingQueue);
         } else if (message.type === 'playbackstate') {
           // Switch the playback button.
-          if (data === 'stopped') {
-            playbackButton.update('play.jpg', null, false);
+          if (response === 'stopped') {
+            playbackButton.update('../img/play.jpg', null, false);
           } else {
-            playbackButton.update('stop.jpg', null, false);
+            playbackButton.update('../img/stop.jpg', null, false);
           }
         } else if (message.type === 'excluded') {
           // Display the currently excluded objects.
-          if (data && data.length > 0) {
-            excludedList.innerHTML = 'Excluded id: ' + data.join();
+          if (response && response.length > 0) {
+            excludedList.innerHTML = 'Excluded id: ' + response.join();
           } else {
             excludedList.innerHTML = nothingExcludedMsg;
           }
         } else if (message.type === 'search') {
-          searchResult.innerHTML = data || emptyResultStr;
+          searchResult.innerHTML = response || emptyResultStr;
         }
       });
       initialized = true;
