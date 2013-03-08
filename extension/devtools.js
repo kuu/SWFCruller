@@ -3,130 +3,128 @@ chrome.devtools.panels.create(
   "icon.png",
   "panel.html",
   function (panel) {
-    var code = [
-        "window.swfcruller = {};",
-        "window.swfcruller.excludedIds = [];",
-        "window.addEventListener('message', function(event) {",
-          "if (event.source != window) return;",
-          "var message = event.data;",
-          "if (message.from !== 'devtools') return;",
-          "console.log('[Web page] postMessage received.', message);",
-          "if (message.type === 'echo') {",
-            "window.postMessage(JSON.stringify({from: 'webpage', type: 'echo'}), '*');",
-          "} else if (message.type === 'togglePlay') {",
-            "var stage = window.swfcruller.player.stage;",
-            "if (!stage) return;",
-            "if (stage.isOpen) {",
-              "stage.close();",
-            "} else {",
-              "stage.open();",
-            "}",
-            "window.postMessage(JSON.stringify({",
-              "from: 'webpage', type: 'playbackstate',",
-              "data: (stage.isOpen ? 'playing' : 'stopped')",
-            "}), '*');",
-          "} else if (message.type === 'exclude') {",
-            "var excludedIds = window.swfcruller.excludedIds = message.data || [];",
-            "window.postMessage(JSON.stringify({",
-              "from: 'webpage', type: 'excluded',",
-              "data: excludedIds}), '*');",
-          "} else if (message.type === 'search') {",
-            "var stage = window.swfcruller.player.stage;",
-            "var root = window.swfcruller.player.root;",
-"console.log('root:', root);",
-            "var query = message.data;",
-            "var doSearch = function (target) {",
-              "if (!target) {",
-                "return null",
-              "} else if (target._name === query) {",
-                "return target;",
-              "}",
-              "var children = target.treeNode.childNodes, result;",
-              "for (var i = 0, il = children.length; i < il; i++) {",
-                "if (result = doSearch(children[i].actor)) {",
-                  "return result;",
-                "}",
-              "}",
-              "return null",
-            "};",
-            "var actor = doSearch(root);",
-"console.log('searching for ' + message.data + ' : ', actor);",
-            "var path = '';",
-            "while (actor && actor._name) {",
-              "path = '/' + actor._name + path;",
-              "actor = actor.parent;",
-            "}",
-            "window.postMessage(JSON.stringify({",
-              "from: 'webpage', type: 'search', data: path}), '*');",
-          "} else if (message.type === 'inject') {",
-          "if (window.theatre) {",
-            "var swfcrew = window.theatre.crews.swf;",
-            "var actions = swfcrew.actions;",
-            "var actors = swfcrew.actors;",
-            "var Player  = swfcrew.Player;",
-            "var WrapperPlayer = function () {",
-              "Player.apply(this, arguments);",
-              "window.swfcruller.player = this;",
-            "};",
-            "WrapperPlayer.prototype = Object.create(Player.prototype);",
-            "WrapperPlayer.prototype.constructor = WrapperPlayer;",
-            "swfcrew.Player = WrapperPlayer;",
-            "var origMethods = {",
-              "add: actions.add,",
-              "replace: actions.replace,",
-              "remove: actions.remove",
-            "};",
-            "var messageData = {from: 'webpage', type: 'actions', data: null};",
-            "var overrideActions = function (pAction) {",
-                "actions[pAction] = function (pSpriteActor, pData) {",
-                  "var tId, tType, tActor, tInstanceId, tParentInstanceId;",
-                  "var excludedIds = window.swfcruller.excludedIds;",
-                  "if (pData.id) {",
-                    "if (excludedIds.indexOf(pData.id) !== -1) {",
-                      "return;",
-                    "}",
-                    "origMethods[pAction](pSpriteActor, pData);",
-                    "tActor = pSpriteActor.getActorAtLayer(pData.depth);",
-                    "if (!tActor) return;",
-                    "tId = tActor.displayListId;",
-                  "} else {",
-                    "tActor = pSpriteActor.getActorAtLayer(pData.depth);",
-                    "if (!tActor) return;",
-                    "tId = tActor.displayListId;",
-                    "if (excludedIds.indexOf(tId) !== -1) {",
-                      "return;",
-                    "}",
-                    "origMethods[pAction](pSpriteActor, pData);",
-                  "}",
-                  "tInstanceId = tActor.uniqueInstanceId;",
-                  "tParentInstanceId = (pSpriteActor.uniqueInstanceId === -1 ? 0 : pSpriteActor.uniqueInstanceId);",
-                  "tType = tActor.displayListType;",
-                  "tType = tType ? tType.substring(6) : '';",
-                  "messageData.data = {",
-                    "action: pAction,",
-                    "parent: tParentInstanceId,",
-                    "target: tInstanceId,",
-                    "type: tType,",
-                    "layer: pData.depth,",
-                    "characterId: tId",
-                  "};",
-                  //"console.log('postMessage: ', JSON.stringify(messageData));",
-                  "window.postMessage(JSON.stringify(messageData), '*');",
-                "};",
-              "};",
-            "overrideActions('add');",
-            "overrideActions('replace');",
-            "overrideActions('remove');",
-          "}",
-          "}",
-        "}, false);",
-        "window.onload = function () {",
-          "window.postMessage(JSON.stringify({from: 'webpage', type: 'loaded'}), '*');",
-        "}"
-      ];
+    var functionToInject = function (global) {
+        global.swfcruller = {};
+        global.swfcruller.excludedIds = [];
+        global.addEventListener('message', function(event) {
+          if (event.source != global) return;
+          var message = event.data;
+          if (message.from !== 'devtools') return;
+          //console.log('[Web page] postMessage received.', message);
+          if (message.type === 'echo') {
+            global.postMessage(global.JSON.stringify({from: 'webpage', type: 'echo'}), '*');
+          } else if (message.type === 'togglePlay') {
+            var stage = global.swfcruller.player.stage;
+            if (!stage) return;
+            if (stage.isOpen) {
+              stage.close();
+            } else {
+              stage.open();
+            }
+            global.postMessage(global.JSON.stringify({
+              from: 'webpage', type: 'playbackstate',
+              data: (stage.isOpen ? 'playing' : 'stopped')
+            }), '*');
+          } else if (message.type === 'exclude') {
+            var excludedIds = global.swfcruller.excludedIds = message.data || [];
+            global.postMessage(global.JSON.stringify({
+              from: 'webpage', type: 'excluded',
+              data: excludedIds}), '*');
+          } else if (message.type === 'search') {
+            var stage = global.swfcruller.player.stage;
+            var root = global.swfcruller.player.root;
+            var query = message.data;
+            var doSearch = function (target) {
+              if (!target) {
+                return null
+              } else if (target._name === query) {
+                return target;
+              }
+              var children = target.treeNode.childNodes, result;
+              for (var i = 0, il = children.length; i < il; i++) {
+                if (result = doSearch(children[i].actor)) {
+                  return result;
+                }
+              }
+              return null
+            };
+            var actor = doSearch(root);
+            var path = '';
+            while (actor && actor._name) {
+              path = '/' + actor._name + path;
+              actor = actor.parent;
+            }
+            global.postMessage(global.JSON.stringify({
+              from: 'webpage', type: 'search', data: path}), '*');
+          } else if (message.type === 'inject') {
+          if (global.theatre) {
+            var swfcrew = global.theatre.crews.swf;
+            var actions = swfcrew.actions;
+            var actors = swfcrew.actors;
+            var Player  = swfcrew.Player;
+            var WrapperPlayer = function () {
+              Player.apply(this, arguments);
+              global.swfcruller.player = this;
+            };
+            WrapperPlayer.prototype = Object.create(Player.prototype);
+            WrapperPlayer.prototype.constructor = WrapperPlayer;
+            swfcrew.Player = WrapperPlayer;
+            var origMethods = {
+              add: actions.add,
+              replace: actions.replace,
+              remove: actions.remove
+            };
+            var messageData = {from: 'webpage', type: 'actions', data: null};
+            var overrideActions = function (pAction) {
+                actions[pAction] = function (pSpriteActor, pData) {
+                  var tId, tType, tActor, tInstanceId, tParentInstanceId;
+                  var excludedIds = global.swfcruller.excludedIds;
+                  if (pData.id) {
+                    if (excludedIds.indexOf(pData.id) !== -1) {
+                      return;
+                    }
+                    origMethods[pAction](pSpriteActor, pData);
+                    tActor = pSpriteActor.getActorAtLayer(pData.depth);
+                    if (!tActor) return;
+                    tId = tActor.displayListId;
+                  } else {
+                    tActor = pSpriteActor.getActorAtLayer(pData.depth);
+                    if (!tActor) return;
+                    tId = tActor.displayListId;
+                    if (excludedIds.indexOf(tId) !== -1) {
+                      return;
+                    }
+                    origMethods[pAction](pSpriteActor, pData);
+                  }
+                  tInstanceId = tActor.uniqueInstanceId;
+                  tParentInstanceId = (pSpriteActor.uniqueInstanceId === -1 ? 0 : pSpriteActor.uniqueInstanceId);
+                  tType = tActor.displayListType;
+                  tType = tType ? tType.substring(6) : '';
+                  messageData.data = {
+                    action: pAction,
+                    parent: tParentInstanceId,
+                    target: tInstanceId,
+                    type: tType,
+                    layer: pData.depth,
+                    characterId: tId
+                  };
+                  //console.log('postMessage: ', JSON.stringify(messageData));
+                  global.postMessage(global.JSON.stringify(messageData), '*');
+                };
+              };
+            overrideActions('add');
+            overrideActions('replace');
+            overrideActions('remove');
+          }
+          }
+        }, false);
+        global.onload = function () {
+          global.postMessage(global.JSON.stringify({from: 'webpage', type: 'loaded'}), '*');
+        }
+      }; // var functionToInject
 
     chrome.devtools.inspectedWindow.reload({
-      injectedScript: code.join('')
+      injectedScript: '(' + functionToInject.toString() + '(this))'
     });
 
     // Establish a connection with the background page.
