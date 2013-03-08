@@ -4,16 +4,17 @@ chrome.devtools.panels.create(
   "panel.html",
   function (panel) {
     var code = [
-        "window.stage = null;",
-        "window.excludedIds = [];",
+        "window.swfcruller = {};",
+        "window.swfcruller.excludedIds = [];",
         "window.addEventListener('message', function(event) {",
           "if (event.source != window) return;",
           "var message = event.data;",
           "if (message.from !== 'devtools') return;",
-          //"console.log('[Web page] postMessage received.', message);",
+          "console.log('[Web page] postMessage received.', message);",
           "if (message.type === 'echo') {",
             "window.postMessage(JSON.stringify({from: 'webpage', type: 'echo'}), '*');",
           "} else if (message.type === 'togglePlay') {",
+            "var stage = window.swfcruller.player.stage;",
             "if (!stage) return;",
             "if (stage.isOpen) {",
               "stage.close();",
@@ -25,10 +26,38 @@ chrome.devtools.panels.create(
               "data: (stage.isOpen ? 'playing' : 'stopped')",
             "}), '*');",
           "} else if (message.type === 'exclude') {",
-            "excludedIds = message.data || [];",
+            "var excludedIds = window.swfcruller.excludedIds = message.data || [];",
             "window.postMessage(JSON.stringify({",
               "from: 'webpage', type: 'excluded',",
               "data: excludedIds}), '*');",
+          "} else if (message.type === 'search') {",
+            "var stage = window.swfcruller.player.stage;",
+            "var root = window.swfcruller.player.root;",
+"console.log('root:', root);",
+            "var query = message.data;",
+            "var doSearch = function (target) {",
+              "if (!target) {",
+                "return null",
+              "} else if (target._name === query) {",
+                "return target;",
+              "}",
+              "var children = target.treeNode.childNodes, result;",
+              "for (var i = 0, il = children.length; i < il; i++) {",
+                "if (result = doSearch(children[i].actor)) {",
+                  "return result;",
+                "}",
+              "}",
+              "return null",
+            "};",
+            "var actor = doSearch(root);",
+"console.log('searching for ' + message.data + ' : ', actor);",
+            "var path = '';",
+            "while (actor && actor._name) {",
+              "path = '/' + actor._name + path;",
+              "actor = actor.parent;",
+            "}",
+            "window.postMessage(JSON.stringify({",
+              "from: 'webpage', type: 'search', data: path}), '*');",
           "} else if (message.type === 'inject') {",
           "if (window.theatre) {",
             "var swfcrew = window.theatre.crews.swf;",
@@ -37,7 +66,7 @@ chrome.devtools.panels.create(
             "var Player  = swfcrew.Player;",
             "var WrapperPlayer = function () {",
               "Player.apply(this, arguments);",
-              "window.stage = this.stage;",
+              "window.swfcruller.player = this;",
             "};",
             "WrapperPlayer.prototype = Object.create(Player.prototype);",
             "WrapperPlayer.prototype.constructor = WrapperPlayer;",
@@ -50,31 +79,39 @@ chrome.devtools.panels.create(
             "var messageData = {from: 'webpage', type: 'actions', data: null};",
             "var overrideActions = function (pAction) {",
                 "actions[pAction] = function (pSpriteActor, pData) {",
-                  "var tId, tType, tActor, tInstanceId;",
+                  "var tId, tType, tActor, tInstanceId, tParentInstanceId;",
+                  "var excludedIds = window.swfcruller.excludedIds;",
                   "if (pData.id) {",
-                    "tId = pData.id;",
-                    "tActorClass = pSpriteActor.player.loader.actorMap[tId];",
-                    "tType = tActorClass.prototype.displayListType;",
+                    "if (excludedIds.indexOf(pData.id) !== -1) {",
+                      "return;",
+                    "}",
+                    "origMethods[pAction](pSpriteActor, pData);",
+                    "tActor = pSpriteActor.getActorAtLayer(pData.depth);",
+                    "if (!tActor) return;",
+                    "tId = tActor.displayListId;",
                   "} else {",
                     "tActor = pSpriteActor.getActorAtLayer(pData.depth);",
                     "if (!tActor) return;",
                     "tId = tActor.displayListId;",
-                    "tType = tActor.displayListType;",
+                    "if (excludedIds.indexOf(tId) !== -1) {",
+                      "return;",
+                    "}",
+                    "origMethods[pAction](pSpriteActor, pData);",
                   "}",
-                  "if (excludedIds.indexOf(tId) !== -1) {",
-                    "return;",
-                  "}",
+                  "tInstanceId = tActor.uniqueInstanceId;",
+                  "tParentInstanceId = (pSpriteActor.uniqueInstanceId === -1 ? 0 : pSpriteActor.uniqueInstanceId);",
+                  "tType = tActor.displayListType;",
                   "tType = tType ? tType.substring(6) : '';",
                   "messageData.data = {",
                     "action: pAction,",
-                    "parent: pSpriteActor.displayListId,",
-                    "target: tId,",
+                    "parent: tParentInstanceId,",
+                    "target: tInstanceId,",
                     "type: tType,",
-                    "layer: pData.depth",
+                    "layer: pData.depth,",
+                    "characterId: tId",
                   "};",
                   //"console.log('postMessage: ', JSON.stringify(messageData));",
                   "window.postMessage(JSON.stringify(messageData), '*');",
-                  "return origMethods[pAction](pSpriteActor, pData);",
                 "};",
               "};",
             "overrideActions('add');",
@@ -128,7 +165,11 @@ chrome.devtools.panels.create(
       var filterText = document.getElementById('filtertxt');
       var filterButton = document.getElementById('filterbtn');
       var excludedList = document.getElementById('excluded');
-      var nothingExcludedMsg = excludedList.innerHTML = '<- Input chracter ids separated with a space, which then will never be added to the stage.';
+      var nothingExcludedMsg = excludedList.innerHTML = '<- Chracter ids separated with a space, which then will never be added to the stage.';
+      var searchText = document.getElementById('searchtxt');
+      var searchButton = document.getElementById('searchbtn');
+      var searchResult = document.getElementById('search');
+      var emptyResultStr = searchResult.innerHTML = '<- Search by the name of Movie clip.';
       filterButton.addEventListener('click', function () {
         var list = filterText.value, array, id, idList = [];
         if (list) {
@@ -141,6 +182,10 @@ chrome.devtools.panels.create(
             port.postMessage({from:'devtools', type: 'exclude', data: idList});
           }
         }
+      }, false);
+
+      searchButton.addEventListener('click', function () {
+        port.postMessage({from:'devtools', type: 'search', data: searchText.value});
       }, false);
 
       // The element added to the screen at last.
@@ -158,7 +203,7 @@ chrome.devtools.panels.create(
           if (data.action === 'add') {
             var elem = document.createElement('div');
             elem.id = data.target;
-            elem.innerHTML = 'id: ' + data.target + ' (' + data.type + ')';
+            elem.innerHTML = 'id: ' + data.characterId + ' (' + data.type + ')';
             elem.style.position = 'relative';
             elem.style.marginLeft = '20px';
             elem.style.color = 'red';
@@ -186,6 +231,8 @@ chrome.devtools.panels.create(
           } else {
             excludedList.innerHTML = nothingExcludedMsg;
           }
+        } else if (message.type === 'search') {
+          searchResult.innerHTML = data || emptyResultStr;
         }
       });
       initialized = true;
