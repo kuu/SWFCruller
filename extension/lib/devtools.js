@@ -84,7 +84,6 @@ chrome.devtools.panels.create(
           };
         } else if (pMsg.type === 'load') {
           mWindowData[pMsg.id].state = 'loaded';
-          mWindowData[pMsg.id].title = pMsg.title;
         }
         var response = pMsg.data;
         var tListener = window.devtoolsBridge.listeners[pMsg.type];
@@ -114,8 +113,6 @@ chrome.devtools.panels.create(
           var tData = {
             from: 'webpage', 
             id: privObj.windowId,
-            url: (global.document ? global.document.URL : null),
-            title: (global.document ? global.document.title : null),
             type: pType
           };
           for (var k in pParams) {
@@ -130,7 +127,9 @@ chrome.devtools.panels.create(
 
         // Notify the devtools panel that the web page has been loaded.
         global.onload = function () {
-          doPostMessage('load');
+          doPostMessage('load', {
+            url: (global.document ? global.document.URL : null),
+            title: (global.document ? global.document.title : null)});
         };
 
         // Handles the messages from the devtools panel.
