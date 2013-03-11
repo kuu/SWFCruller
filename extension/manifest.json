@@ -2,25 +2,26 @@
   "name": "SWFCruller",
   "version": "0.1",
   "description": "Extends the Developer Tools, monitoring the internal state of SWFCrew.",
-  "devtools_page": "DPB/devtools.html",
-  "manifest_version": 2,
   "icons": {
-    "16": "img/icon-16.png",
-    "48": "img/icon-48.png",
-    "128": "img/icon-128.png"
+    "16": "app/img/icon-16.png",
+    "48": "app/img/icon-48.png",
+    "128": "app/img/icon-128.png"
   },
+  "manifest_version": 2,
+  "devtools_page": "lib/devtools.html",
   "permissions": [
     "tabs",
     "<all_urls>"
   ],
   "background": {
     "scripts": [
-      "DPB/background.js"
+      "lib/background.js"
     ]
   },
   "content_scripts": [{
     "matches": ["<all_urls>"],
-    "js": ["DPB/content.js"],
-    "run_at": "document_end"
+    "js": ["lib/content.js"],
+    "run_at": "document_start",
+    "all_frames": true
   }]
 }
