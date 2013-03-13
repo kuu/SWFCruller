@@ -42,7 +42,6 @@ function registerPanelListeners(global, panel) {
    *    {number} windowId The optional id that represents a specific frame within the tab.
    */
   myPanel.on('load', function (event, sendEvent) {
-    sendEvent('overrideMethods');
     playbackButton.onClicked.addListener(function () {
       sendEvent('togglePlay');
     });

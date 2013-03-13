@@ -7,7 +7,7 @@ chrome.extension.onConnect.addListener(function (port) {
         }, function (tabs) {
             for (tab in tabs) {
                 //Sending Message to content scripts
-                console.log('[Background page] sendMessage from the devtools.', message);
+                //console.log('[Background page] sendMessage from the devtools.', message);
                 chrome.tabs.sendMessage(tabs[tab].id, message);
             }
         });
@@ -16,7 +16,7 @@ chrome.extension.onConnect.addListener(function (port) {
     //Posting back to Devtools
     chrome.extension.onMessage.addListener(function (message, sender) {
         if (message.from !== 'webpage') return;
-        console.log('[Background page] postMessage from the web page.', message);
+        //console.log('[Background page] postMessage from the web page.', message);
         port.postMessage(message);
     });
 });

@@ -78,9 +78,10 @@ chrome.devtools.panels.create(
 
       mPort.onMessage.addListener(function (pMsg) {
         if (pMsg.from !== 'webpage') return;
-        if (pMsg.type === 'injected') {
+
+        if (pMsg.type === 'preload') {
           mWindowData[pMsg.id] = {
-            state: 'injected'
+            state: 'preloaded'
           };
         } else if (pMsg.type === 'load') {
           mWindowData[pMsg.id].state = 'loaded';
@@ -118,15 +119,27 @@ chrome.devtools.panels.create(
           for (var k in pParams) {
             tData[k] = pParams[k];
           }
-          console.log('[Web page] sending a message to the devtools panel.', tData);
+          //console.log('[Web page] sending a message to the devtools panel.', tData);
           global.postMessage(JSON.stringify(tData), '*');
         };
 
+        // Invokes listeners given by registerWebPageListeners.
+        var doInvokeListeners = function (pType, pParam) {
+          var tListener = global.devtoolsBridge.listeners[pType];
+          if (tListener) {
+            for (var i = 0, il = tListener.length; i < il; i++) {
+              tListener[i](pParam, doPostMessage);
+            }
+          }
+        };
+
         // Notify the devtools panel that the script has been injected.
-        doPostMessage('injected');
+        doInvokeListeners('preload');
+        doPostMessage('preload');
 
         // Notify the devtools panel that the web page has been loaded.
-        global.onload = function () {
+        global.onload = function (e) {
+          doInvokeListeners('load', e);
           doPostMessage('load', {
             url: (global.document ? global.document.URL : null),
             title: (global.document ? global.document.title : null)});
@@ -138,14 +151,8 @@ chrome.devtools.panels.create(
           var tMsg = event.data;
           if (tMsg.from !== 'devtools') return;
           if (tMsg.id !== privObj.windowId) return;
-          console.log('[Web page] postMessage received.', tMsg);
-
-          var tListener = global.devtoolsBridge.listeners[tMsg.type];
-          if (tListener) {
-            for (var i = 0, il = tListener.length; i < il; i++) {
-              tListener[i](tMsg, doPostMessage);
-            }
-          }
+          //console.log('[Web page] postMessage received.', tMsg);
+          doInvokeListeners(tMsg.type, tMsg);
         }, false);
 
       }; // mFunctionToInject

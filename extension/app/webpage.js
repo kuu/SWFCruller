@@ -21,15 +21,8 @@ function registerWebPageListeners(global) {
    *    {string} eventType The event type to send.
    *    {object} params The optional data associated with the event.
    */
-  myWebPage.on('jqcheck', function (event, sendEvent) {
-    var isUsed = false;
-    if (global.jQuery) {
-      isUsed = true;
-    }
-    sendEvent('jqcheck', {data: isUsed});
-  });
 
-  myWebPage.on('overrideMethods', function (event, sendEvent) {
+  myWebPage.on('load', function (event, sendEvent) {
     if (global.theatre) {
       var uniqueInstanceId = 1;
       var swfcrew = global.theatre.crews.swf;
