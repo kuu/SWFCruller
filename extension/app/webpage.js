@@ -41,6 +41,15 @@ function registerWebPageListeners(global) {
         return actor;
       };
       swfcrew.Player = WrapperPlayer;
+      var Parser = global.quickswf.Parser;
+      var origParse = Parser.prototype.parse;
+      Parser.prototype.parse = function (pSuccessCallback, pFailureCallback) {
+          origParse.call(this, function (pSWF) {
+              console.log(pSWF);
+              pSuccessCallback(pSWF);
+            }, pFailureCallback
+          );
+        };
       var origMethods = {
         add: actions.add,
         replace: actions.replace,
@@ -80,6 +89,11 @@ function registerWebPageListeners(global) {
             layer: pData.depth,
             characterId: tId
           };
+          if (tType === 'Sprite') {
+            tParam.name = tActor._name;
+          } else if (tType === 'EditText') {
+            tParam.name = tActor.variableName;
+          }
           sendEvent('actions', {data: tParam});
         };
       };
@@ -132,4 +146,41 @@ function registerWebPageListeners(global) {
     sendEvent('search', {data: path});
   });
 
+  myWebPage.on('variable', function (event, sendEvent) {
+    var SpriteActor = global.theatre.crews.swf.actors.SpriteActor;
+    var stage = myWebPage.swfcruller.player.stage;
+    var root = myWebPage.swfcruller.player.root;
+    var query = event.data;
+    var paths = [];
+    var fullPath = function (actor) {
+      var path = '';
+      while (actor && actor._name) {
+        path = '/' + actor._name + path;
+        actor = actor.parent;
+      }
+      return path;
+    };
+    var doSearch = function (target, results) {
+      if (!target || !(target instanceof SpriteActor)) {
+        return
+      }
+      var variables = target.variables;
+      for (var k in variables) {
+        if (k === query) {
+          results.push({target: target, variable: variables[k]});
+          break;
+        }
+      }
+      var children = target.treeNode.childNodes;
+      for (var i = 0, il = children.length; i < il; i++) {
+        doSearch(children[i].actor, results);
+      }
+    };
+    doSearch(root, paths);
+    for (var i = 0, il = paths.length; i < il; i++) {
+      var varInfo = paths[i];
+      paths[i] = fullPath(varInfo.target) + ':' + varInfo.variable.name + ' = ' + varInfo.variable.value;
+    }
+    sendEvent('variable', {data: paths});
+  });
 };

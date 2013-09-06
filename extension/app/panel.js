@@ -20,7 +20,11 @@ function registerPanelListeners(global, panel) {
   var searchText = document.getElementById('searchtxt');
   var searchButton = document.getElementById('searchbtn');
   var searchResult = document.getElementById('search');
-  var emptyResultStr = searchResult.innerHTML = '<- Search by the name of Movie clip.';
+  var emptyResultStr = searchResult.innerHTML = '<- Search the name of Movie clip.';
+  var variableText = document.getElementById('variabletxt');
+  var variableButton = document.getElementById('variablebtn');
+  var variableResult = document.getElementById('variable');
+  var emptyVariableStr = variableResult.innerHTML = '<- Show variable\'s value.';
 
   // The element added to the screen at last.
   var lastAdded = null;
@@ -61,6 +65,9 @@ function registerPanelListeners(global, panel) {
     searchButton.addEventListener('click', function () {
       sendEvent('search', {data: searchText.value});
     }, false);
+    variableButton.addEventListener('click', function () {
+      sendEvent('variable', {data: variableText.value});
+    }, false);
   });
 
   myPanel.on('actions', function (event, sendEvent) {
@@ -77,6 +84,9 @@ function registerPanelListeners(global, panel) {
         var elem = document.createElement('div');
         elem.id = data.target;
         elem.innerHTML = 'id: ' + data.characterId + ' (' + data.displayType + ')';
+        if (data.name) {
+          elem.innerHTML += (' : "' + data.name + '"');
+        }
         elem.style.position = 'relative';
         elem.style.marginLeft = '20px';
         elem.style.color = 'red';
@@ -119,5 +129,17 @@ function registerPanelListeners(global, panel) {
 
   myPanel.on('search', function (event, sendEvent) {
     searchResult.innerHTML = event.data || emptyResultStr;
+  });
+
+  myPanel.on('variable', function (event, sendEvent) {
+    var paths = event.data;
+    if (paths.length === 0) {
+      variableResult.innerHTML = emptyVariableStr;
+    } else {
+      variableResult.innerHTML = '';
+      for (var i = 0, il = paths.length; i < il; i++) {
+        variableResult.innerHTML += paths[i] + '<br>';
+      }
+    }
   });
 };
